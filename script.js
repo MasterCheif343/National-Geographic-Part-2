@@ -48,6 +48,14 @@ const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 // TODO: const guideResponseEl = ...
 // TODO: askBtn.addEventListener(...)
 
+const questionInput = document.getElementById("questionInput");
+
+const askBtn = document.getElementById("askBtn");
+
+const guideResponseEl = document.getElementById("guideResponse");
+askBtn.addEventListener("click", askFieldGuide);
+
+askBtn.addEventListener("click", askFieldGuide);
 
 /* ============================================================
    STEP 2 (part 1): Create a variable to remember the country.
@@ -55,6 +63,7 @@ const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
    ============================================================ */
 // TODO: let currentCountry = ...
 
+let currentCountry = null; //Set to null first to remember what country is being explored.
 
 // --- Part 1: connect the Explore button (already done) --------
 searchBtn.addEventListener("click", fetchCountry);
@@ -66,7 +75,7 @@ async function fetchCountry() {
   showLoading();
 
   try {
-    const API_KEY = ""; // REST Countries v5 key (same as Part 1)
+    const API_KEY = "rc_live_6035c3ac489e40ba8770a89b6502d2bf"; // REST Countries v5 key (same as Part 1)
     const url =
       `https://api.restcountries.com/countries/v5?q=${encodeURIComponent(countryName)}` +
       `&response_fields=names.common,capitals,region,population,languages,flag.url_png,flag.description`;
@@ -86,7 +95,7 @@ async function fetchCountry() {
       throw new Error("Country not found");
     }
 
-    const country = objects[0];
+    const country = objects[0]; //country array
 
     countryNameEl.textContent = country.names.common;
     flagImg.src = country.flag.url_png;
@@ -110,7 +119,13 @@ async function fetchCountry() {
        ---------------------------------------------------------- */
     // TODO
 
+    currentCountry = country; // Store the country in currentCountry
 
+    guideCountryNameEl.textContent = country.name.common;
+
+    guideResponseEl.textContent = `Ask me anything about ${country.names.common}`;
+
+    fieldGuide.classList.remove("hidden"); // Remove the "hidden" class from fieldGuideEl
   } catch (error) {
     hideLoading();
     resultCard.classList.add("hidden");
@@ -132,9 +147,20 @@ async function fetchCountry() {
      and return
    ============================================================ */
 async function askFieldGuide() {
+  const question = questionInput.value.trim();
+
+  if (!currentCountry) {
+    guideResponseEl.textContent =
+      "Explore a countery first, then ask me a question :-P";
+
+    return;
+  }
+
+  if (!question) {
+    guideResponseEl.textContent = "Type a question first :/";
+    return;
+  }
   // TODO: read and validate the question
-
-
   /* ----------------------------------------------------------
      STEP 4: Build the messages array.
      ----------------------------------------------------------
@@ -144,21 +170,28 @@ async function askFieldGuide() {
      ---------------------------------------------------------- */
   // TODO: const messages = [ ... ];
 
+  const messages = [
+    {
+      role: "system",
+      content: buildSystemPrompt(currentCountry),
+    },
 
+    {
+      role: "user",
+      content: question,
+    },
+  ];
   /* ----------------------------------------------------------
      STEP 6 (part 1): Loading state.
      Show "Consulting the field notes..." in guideResponseEl
      BEFORE you send the request.
      ---------------------------------------------------------- */
   // TODO
-
-
   /* ----------------------------------------------------------
      STEP 6 (part 2): Wrap Step 5 in try { } catch (error) { }
      In the catch, show a friendly error in guideResponseEl
      and console.error the real error.
      ---------------------------------------------------------- */
-
   /* ----------------------------------------------------------
      STEP 5: Send the POST request, parse, and display.
      ----------------------------------------------------------
@@ -178,7 +211,39 @@ async function askFieldGuide() {
      - Put that text into guideResponseEl.textContent
      ---------------------------------------------------------- */
   // TODO
+  guideResponseEl.textContent = "Consulting the field notes...";
 
+  guideResponseEl.className = "guide-response thinking";
+
+  askbtn.disabled = true;
+  try {
+    const response = await fetch(OPENAI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({ model: "gpt-4o", messages: messages }),
+    }); //stringify turns an object into a string/text
+
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Raw AI response:", data);
+
+    const reply = data.choices[0].message.content;
+    guideResponseEl.textContent = reply;
+    guideResponseEl.className = "guide-response";
+  } catch (error) {
+    console.error("Error:", error);
+    guideResponseEl.textContent =
+      "The Field guide couldn't answer your question. Please try again later.";
+    guideResponseEl.className = "guide-response error";
+  } finally {
+    askbtn.disabled = false;
+  }
 }
 
 /* ============================================================
@@ -199,7 +264,7 @@ function buildSystemPrompt(country) {
 Here are verified facts about the country the visitor is exploring:
 ${facts}
 
-Only answer questions about ${country.names.common}. Keep answers short, warm and family-friendly.`;
+Only answer questions about ${country.names.common}. Please keep answers short, warm and family-friendly.`;
 }
 
 /* ============================================================
