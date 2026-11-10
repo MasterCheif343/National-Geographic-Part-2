@@ -55,8 +55,6 @@ const askBtn = document.getElementById("askBtn");
 const guideResponseEl = document.getElementById("guideResponse");
 askBtn.addEventListener("click", askFieldGuide);
 
-askBtn.addEventListener("click", askFieldGuide);
-
 /* ============================================================
    STEP 2 (part 1): Create a variable to remember the country.
    Start it as null (nothing explored yet).
@@ -121,11 +119,11 @@ async function fetchCountry() {
 
     currentCountry = country; // Store the country in currentCountry
 
-    guideCountryNameEl.textContent = country.name.common;
+    guideCountryNameEl.textContent = country.names.common;
 
     guideResponseEl.textContent = `Ask me anything about ${country.names.common}`;
 
-    fieldGuide.classList.remove("hidden"); // Remove the "hidden" class from fieldGuideEl
+    fieldGuideEl.classList.remove("hidden");
   } catch (error) {
     hideLoading();
     resultCard.classList.add("hidden");
@@ -215,7 +213,7 @@ async function askFieldGuide() {
 
   guideResponseEl.className = "guide-response thinking";
 
-  askbtn.disabled = true;
+  askBtn.disabled = true;
   try {
     const response = await fetch(OPENAI_URL, {
       method: "POST",
@@ -242,7 +240,7 @@ async function askFieldGuide() {
       "The Field guide couldn't answer your question. Please try again later.";
     guideResponseEl.className = "guide-response error";
   } finally {
-    askbtn.disabled = false;
+    askBtn.disabled = false;
   }
 }
 
